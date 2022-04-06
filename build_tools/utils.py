@@ -1,8 +1,8 @@
 # Copyright 2021. The Regents of the University of California.
-# All rights reserved. Use of this source code is governed by 
+# All rights reserved. Use of this source code is governed by
 # a BSD-style license which can be found in the LICENSE file.
 #
-# Authors: 
+# Authors:
 # 2021 Max Litster <litster@berkeley.edu>
 
 
@@ -89,7 +89,7 @@ def parse_interface(tool: str):
             pos_args.append(arg)
         if arg['type'] == 'OUTFILE':
             has_output = True
-    
+
     template_dict = {
         'name': "_".join(name.split()),
         'usage_str': get_help_string(tool),
@@ -124,33 +124,33 @@ def parse_pos_args(pos_str: str):
     for arg in positional_args:
         if not arg: # pass over empty strings
             continue
-        
+
         # Regex for cleaning and parsing interface output
         arg = re.sub(r'[\{\}\"]', '', arg).strip()
         args = arg.split(',')
         if len(args) < 3: # ignore output that does not pertain to an argument
             continue
-        
+
         required_str, arg_type, num_arg = [x.strip() for x in args[:3]]
 
-        required = False       
+        required = False
         if required_str == 'true':
             required = True
-        
+
         # num_arg > 1 indicates a multituple (more than one arg/tuple required)
-        if arg_type == 'ARG_TUPLE' and num_arg != '1': 
+        if arg_type == 'ARG_TUPLE' and num_arg != '1':
 
             num_tuples = int(num_tuples)
             # tuple_args is a list of tuple argument interface strings
             # each element of tuple_arg_lists is a list of the form [OPTION_TYPE, SIZE, NAME]
             tuple_args = [x.strip() for x in arg.split('\n\t')[1:]]
             tuple_arg_lists = [[s.strip() for s in lst.split(",")] for lst in tuple_args]
-            arg_list.extend([create_arg_dict(lst, 'ARG_MULTITUPLE', required) for lst in tuple_arg_lists])      
+            arg_list.extend([create_arg_dict(lst, 'ARG_MULTITUPLE', required) for lst in tuple_arg_lists])
         elif 'ARG' in arg_type:
             # for non-multituple args, last three elements of the 'arg' output are OPTION_TYPE, SIZE, and NAME
             arg_dict = create_arg_dict(args[-3:], arg_type, required)
             arg_list.append(arg_dict)
-    
+
     return arg_list
 
 
@@ -171,7 +171,7 @@ def create_arg_dict(arg_data, arg_type, required):
     opt_type, _, arg_name = [x.strip() for x in arg_data]
     opt_type = re.sub('OPT_', '', opt_type)
     type_str = opt_type if opt_type not in TYPE_MAP.keys() else TYPE_MAP[opt_type]
-    
+
     is_input = True
     if opt_type == 'OUTFILE':
         is_input = False
@@ -181,7 +181,7 @@ def create_arg_dict(arg_data, arg_type, required):
         type_str = 'multituple'
     elif arg_type == 'ARG_TUPLE':
         type_str = 'tuple'
-    
+
     arg_dict = {
         'name': format_string(arg_name),
         'required': required,
@@ -199,7 +199,7 @@ def parse_opt_args(opt_str: str):
 
     Returns a dictionary where each item takes the form:
     {
-        'name': name drawn from cmd line flag (formatted), 
+        'name': name drawn from cmd line flag (formatted),
         'flag': flag from cmd line,
         'required': boolean indicating whether or not its required,
         'type': string indicating argument type,
@@ -216,26 +216,26 @@ def parse_opt_args(opt_str: str):
     for opt in opts:
         if not opt:
             continue
-        
+
         toks = [tok.strip() for tok in opt.split(',')]
         flag, long_opt, required, opt_type, __ = toks[:5]
 
         # handle long options (indicated by `--` on the command line)
         is_long_opt = False
-        if long_opt != "(null)": 
+        if long_opt != "(null)":
             flag = long_opt # parse long opt
             is_long_opt = True
-        
+
         # remaining tokens are description string
         desc = " ".join(toks[5:])
-        
+
         required = False
         if required == 'true':
             required = True
-        
+
         type_str = re.sub('OPT_', '', opt_type)
         type_str = type_str if type_str not in TYPE_MAP.keys() else TYPE_MAP[type_str]
-        
+
         opt_list.append({
             'name': format_string(flag),
             'flag': flag,
@@ -246,7 +246,7 @@ def parse_opt_args(opt_str: str):
             'is_long_opt': is_long_opt,
             'input': True,
         })
-    
+
     return opt_list
 
 
@@ -257,7 +257,7 @@ def format_docstring(usage: str, arg_list, kwarg_dict):
     usage = usage.strip().strip("\"")
     docstring = f'{usage}\n\n'
     for arg in arg_list:
-        if not arg['input']: 
+        if not arg['input']:
             continue
         docstring += f"\t:param {arg['name']} {arg['type']}:\n"
     for kwarg in kwarg_dict:
@@ -301,22 +301,22 @@ def create_arg_str(arg_dict, kwarg_dict):
         else:
             formatted_args.append(arg_name)
             ARG_MAP[arg_name] = arg_name
-    
+
     formatted_args = input_args + formatted_args
     arg_list = formatted_args
 
     if len(arg_list) > 0:
         arg_str += ', '.join(arg_list) + ', '
-    
+
     for kwarg in kwarg_dict:
         name = kwarg['name']
         name = format_string(name)
         if 'help' not in name: # don't add help string as an arg
             arg_str += f'{name}=None, '
-    
+
     arg_str = arg_str.rstrip(', ')
     arg_str += ')'
-    
+
     return arg_str
 
 
@@ -331,7 +331,7 @@ def create_template(tool: str):
         template_dict['docstring'], template_dict['arg_list'], template_dict['kwarg_list']
     formatted_docstring = format_docstring(docstring, arg_list, kwarg_list)
     arg_str = create_arg_str(arg_list, kwarg_list)
-    
+
     usage_string = template_dict['usage_str']
 
     tool = tool.decode('utf8')
@@ -375,13 +375,13 @@ def create_template(tool: str):
                 template += f"\tflag_str += f'-{flag} "
             else:
                 template += f"\tflag_str += f'-{flag} "
-            
+
             if kwarg['type'] == 'array':
                 template += '{NAME}' + arg_name + " '\n"
             elif kwarg['type'] == 'list':
                 template +=  "{" + f"\":\".join([str(x) for x in {arg_name}])" + "}" + " '\n"
             elif kwarg['type'] == 'bool':
-                template += "'\n"    
+                template += "'\n"
             else:
                 template += '{' + arg_name + "} '\n"
 
@@ -396,10 +396,10 @@ def create_template(tool: str):
             elif kwarg['type'] == 'multituple':
                 template += f"multituples.append({name}) \n"
             elif kwarg['type'] == 'array':
-                template += "\topt_args += 'NAME + {" + name + "}'\n" 
+                template += "\topt_args += 'NAME + {" + name + "}'\n"
             else:
-                template += "\topt_args += '{" + name + "}'\n" 
-            
+                template += "\topt_args += '{" + name + "}'\n"
+
     template += "\tcmd_str += flag_str + opt_args + '  '\n"
 
     arg_names = "{" + f"' '.join([' '.join([str(x) for x in arg]) for arg in zip(*multituples)]).strip()" + "} "
@@ -411,12 +411,12 @@ def create_template(tool: str):
         if arg['type'] == 'array' or arg['type'] == 'OUTFILE':
             arg_names += "{NAME}" + arg['name'] + " "
         elif arg['input'] and arg['type'] == 'tuple':
-            arg_names += "{" + f"' '.join([str(arg) for arg in {arg['name']}])" + "} " 
+            arg_names += "{" + f"' '.join([str(arg) for arg in {arg['name']}])" + "} "
         elif arg['input'] and arg['type'] == 'multituple':
             template += f"\n\tmultituples.append({arg['name']})\n\t"
         else:
             arg_names += "{" + arg['name'] + "} "
-    
+
     template += f'\n\tcmd_str += f\"{arg_names} \"'
 
     for arg in arg_list:
